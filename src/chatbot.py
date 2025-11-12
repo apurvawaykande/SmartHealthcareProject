@@ -1,17 +1,7 @@
 import streamlit as st
 from symptom_data import get_advice_for_symptom
 from deep_translator import GoogleTranslator
-
-# Example usage
-translated_text = GoogleTranslator(source='auto', target='hi').translate("Hello")
-print(translated_text)  # Prints "नमस्ते"
-
-
-# Optional: OpenAI GPT integration
-try:
-    from openai import OpenAI
-except ImportError:
-    OpenAI = None
+import openai
 
 # -----------------------------
 # Hardcoded symptom dictionary
@@ -28,9 +18,9 @@ SYMPTOM_ADVICE = {
 # GPT Client setup
 # -----------------------------
 def init_gpt_client():
-    """Initialize OpenAI client if API key is available in Streamlit secrets"""
-    if "openai_api_key" in st.secrets and OpenAI is not None:
-        return OpenAI(api_key=st.secrets["openai_api_key"])
+    if "openai_api_key" in st.secrets:
+        openai.api_key = st.secrets["openai_api_key"]
+        return openai
     return None
 
 client = init_gpt_client()
@@ -39,18 +29,8 @@ client = init_gpt_client()
 # Chatbot response function
 # -----------------------------
 def get_chat_response(user_input, chat_history=None, target_lang="en"):
-    """
-    Returns chatbot response for a user input.
-    Supports multi-turn chat and multilingual responses.
-    
-    Params:
-    - user_input: str
-    - chat_history: list of tuples [(sender, message)]
-    - target_lang: language code (e.g., "en", "hi", "es")
-    """
     responses = []
 
-    # Normalize input
     user_input_clean = user_input.strip().lower()
 
     # 1️⃣ Check hardcoded dictionary
@@ -71,7 +51,6 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
              "content": "You are a helpful AI healthcare assistant. Provide concise, safe, non-diagnostic advice. Always recommend seeing a doctor for serious issues."}
         ]
 
-        # Limit chat history to last 10 messages to avoid token overflow
         if chat_history:
             for sender, message in chat_history[-10:]:
                 role = "user" if sender == "You" else "assistant"
@@ -80,7 +59,7 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
         messages.append({"role": "user", "content": user_input})
 
         try:
-            response = client.chat.completions.create(
+            response = client.ChatCompletion.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=200,
@@ -95,10 +74,9 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
     if not responses:
         responses.append("I'm sorry, I couldn't find relevant advice. Please consult a doctor or provide more details.")
 
-    # Combine responses
     final_reply = "\n\n".join(responses)
 
-    # Translate to target language if needed
+    # Translate if needed
     if target_lang != "en":
         try:
             final_reply = GoogleTranslator(source='auto', target=target_lang).translate(final_reply)
