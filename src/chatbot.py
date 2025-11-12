@@ -18,6 +18,10 @@ SYMPTOM_ADVICE = {
 # GPT Client setup
 # -----------------------------
 def init_gpt_client():
+    """
+    Initialize OpenAI client using Streamlit secrets.
+    Works with openai>=1.0.0.
+    """
     if "openai_api_key" in st.secrets:
         openai.api_key = st.secrets["openai_api_key"]
         return openai
@@ -29,6 +33,10 @@ client = init_gpt_client()
 # Chatbot response function
 # -----------------------------
 def get_chat_response(user_input, chat_history=None, target_lang="en"):
+    """
+    Returns chatbot response for a user input.
+    Supports multi-turn chat and multilingual responses.
+    """
     responses = []
 
     user_input_clean = user_input.strip().lower()
@@ -51,6 +59,7 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
              "content": "You are a helpful AI healthcare assistant. Provide concise, safe, non-diagnostic advice. Always recommend seeing a doctor for serious issues."}
         ]
 
+        # Include last 10 messages of chat history
         if chat_history:
             for sender, message in chat_history[-10:]:
                 role = "user" if sender == "You" else "assistant"
@@ -65,7 +74,8 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
                 max_tokens=200,
                 temperature=0.7
             )
-            ai_reply = response.choices[0].message.content
+            # ✅ OpenAI >=1.0.0 format
+            ai_reply = response.choices[0].message['content']
             responses.append(ai_reply)
         except Exception as e:
             responses.append(f"⚠️ GPT API error: {e}")
@@ -74,9 +84,10 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
     if not responses:
         responses.append("I'm sorry, I couldn't find relevant advice. Please consult a doctor or provide more details.")
 
+    # Combine all responses
     final_reply = "\n\n".join(responses)
 
-    # Translate if needed
+    # Translate if target language is not English
     if target_lang != "en":
         try:
             final_reply = GoogleTranslator(source='auto', target=target_lang).translate(final_reply)
