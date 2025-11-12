@@ -68,14 +68,14 @@ def get_chat_response(user_input, chat_history=None, target_lang="en"):
         messages.append({"role": "user", "content": user_input})
 
         try:
-            response = client.ChatCompletion.create(
+            # ✅ Updated OpenAI 1.0+ syntax
+            response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=200,
                 temperature=0.7
             )
-            # ✅ OpenAI >=1.0.0 format
-            ai_reply = response.choices[0].message['content']
+            ai_reply = response.choices[0].message.content
             responses.append(ai_reply)
         except Exception as e:
             responses.append(f"⚠️ GPT API error: {e}")
